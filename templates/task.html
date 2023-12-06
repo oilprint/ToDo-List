@@ -1,0 +1,26 @@
+<li class="task-list__item">
+    <div class="task назва_категорії назва_статуса archive(якщо в архіві)">
+      <div class="task__head">
+        <div class="task__check">
+          <input
+            class="sr-only checkbox-input"
+            type="checkbox"
+            name="id_завдання"
+            id="id_завдання"
+          >
+          <label for="id_завдання" class="task__checkbox checkbox"></label>
+          <div class="task__name">текст задачі</div>
+        </div>
+        <div class="task__actions">
+          <button class="btn btn--icon btn--orange task__btn task__btn--edit" type="button" title="Редагувати"></button>
+          <button class="btn btn--icon btn--red task__btn task__btn--remove" type="button" title="Видалити"></button>
+        </div>
+      </div>
+      <div class="task__info">
+        <div class="task__category" title="назва категорії українською"></div>
+        <div class="task__date">час до завершення</div>
+      </div>
+      <button class="btn btn--icon btn--gray task__btn task__btn--archive" type="button" title="Архівувати/Вилучити"></button>
+
+    </div>
+</li>
