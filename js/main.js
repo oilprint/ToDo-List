@@ -1,14 +1,19 @@
 const myForm = document.querySelector('.form'), 
       wrapper = document.querySelector('.wrapper'),
-      formFields = document.querySelectorAll('.form-field'), 
-      inputTask = document.querySelector('#task-text'),
-      inputDate = document.querySelector('.form-field--date'),
-      inputTime = document.querySelector('.form-field--time'),
-      categories = document.querySelectorAll('.categories__group'),
+      formFields = document.querySelectorAll('.form-field'),
+      sortSection = document.querySelector('.sorting'),
+      sortCount = document.querySelector('.sorting__count'),
+       
+      // inputTask = document.querySelector('#task-text'),
+      // inputDate = document.querySelector('.form-field--date'),
+      // inputTime = document.querySelector('.form-field--time'),
+      // categories = document.querySelectorAll('.categories__group'),
       taskList = document.querySelector('.task-list'),
       notifications = document.querySelector('.notifications'),
-      btnAddTask = document.querySelector('.add-task__btn'),
+      // btnAddTask = document.querySelector('.add-task__btn'),
       nowDate = Date.now(),
+      statusTaskList = [],
+      categoryTaskList = [],
       allTasks = JSON.parse(localStorage.getItem('allTasks')) || [];
 
 const messages = {
@@ -33,7 +38,7 @@ const msgText = {
   remove: 'Завдання видалено',
   done: 'Завдання виконано',
   archive: 'Завдання додано до архіву',
-  unArchive: 'Завдання додано до архіву',
+  unArchive: 'Завдання видаленно з архіву',
 };
 const yearInMs = 365 *24 * 3600 *1000;
 
@@ -131,7 +136,6 @@ function checkDate(target, message) {
   };
 };
 
-
 function checkOnFocus(target) {
   if(target.value.length < 1) {
     addFieldError(target, messages.errorRequired);
@@ -171,7 +175,7 @@ function getTaskNameCategory(categoryName) {
   return categories[categoryName];
 };
 
-function  getRemainingTime(dateTime) {
+function getRemainingTime(dateTime) {
   const currentDate = new Date();
   const targetDate = new Date(dateTime);
   const diffInHours = Math.floor((targetDate - currentDate) / (3600 * 1000));
@@ -279,7 +283,6 @@ function checkFormSuccess(formName, groupClass) {
    return true;
 };
 
-
 function handlerAddTaskBtn(e) {
   e.preventDefault();
   const error = document.querySelector('.form-error');
@@ -291,6 +294,7 @@ function handlerAddTaskBtn(e) {
     clearForm(myForm, '.add-task__group');
     addTaskToPage(allTasks);
     addMessage(msgType.add, msgText.add);
+    sortCount.textContent = allTasks.length;
   } else {
     markFieldsWithError(myForm, '.add-task__group');
     error.classList.add('show');
@@ -312,8 +316,12 @@ function changeArchiveStatus(id) {
   allTasks.forEach(item => { 
     if (item.id === +id) {
       item.inArchive = item.inArchive === true ? false : true;
-      addMessage(msgType.archive, msgText.archive);
-    }
+         if (item.inArchive === true) {
+          addMessage(msgType.archive, msgText.archive);
+      } else {
+        addMessage(msgType.archive, msgText.unArchive);
+      };
+    };
   });
   updateLocalStorage(allTasks);
   addTaskToPage(allTasks);
@@ -341,6 +349,16 @@ function textOfTask(id) {
   return text;
 };
 
+function addFilters() {
+  if (allTasks.length > 1) {
+     sortSection.classList.remove('hide');
+     sortCount.textContent = allTasks.length;
+     document.getElementById('categorySort[all]').setAttribute('checked', true)
+     document.getElementById('timeSort[all]').setAttribute('checked', true);
+  };
+};
+
+addFilters();
 
 
 document.addEventListener('click', (e) => {
@@ -414,11 +432,107 @@ document.addEventListener('click', (e) => {
     changeArchiveStatus(id);
   };
 
+});
 
-  
+sortSection.addEventListener('click', (e) => {
+  const target = e.target;
+  if (target.getAttribute('id') === 'statusSort[all]'){
+     statusTaskList.splice(0);
+    allTasks.forEach(item => {
+      statusTaskList.push(item);
+    });
+    addTaskToPage(statusTaskList);
+    sortCount.textContent = statusTaskList.length;
+  };
 
+
+  if (target.getAttribute('id') === 'statusSort[undone]'){
+
+    getFilterStatusTaskList(allTasks, 'taskStatus', 'new');
+    console.log(statusTaskList);
+
+  };
+
+  if (target.getAttribute('id') === 'statusSort[done]'){
+    getFilterStatusTaskList(allTasks, 'taskStatus', 'done');
+    console.log(statusTaskList);
+  };
+
+  if (target.getAttribute('id') === 'statusSort[archive]'){
+    getFilterStatusArchive(allTasks, 'inArchive', true);
+  };
+
+  if (target.getAttribute('id') === 'categorySort[all]'){
+    getFilterCategotyAll();
+  };
+
+  if (target.getAttribute('id') === 'categorySort[urgent]'){
+    getFilterCategoty(statusTaskList, 'category', 'urgent');
+  };
+
+  if (target.getAttribute('id') === 'categorySort[study]'){
+    getFilterCategoty(statusTaskList, 'category', 'study');
+  };
+
+  if (target.getAttribute('id') === 'categorySort[work]'){
+    getFilterCategoty(statusTaskList, 'category', 'work');
+  };
+
+  if (target.getAttribute('id') === 'categorySort[hobby]'){
+    getFilterCategoty(statusTaskList, 'category', 'hobby');
+  };
 
 });
+
+const categoryFilters = sortSection.querySelectorAll('.category-sorting');
+
+function getFilterStatusTaskList(arr, filter, filterValue) {
+  categoryTaskList.splice(0);
+    const filterTask = arr.filter(item => item[filter] === filterValue);
+    statusTaskList.splice(0);
+    filterTask.forEach(item => {
+      if (item.inArchive === false) {
+        statusTaskList.push(item);
+      }
+    });
+  addTaskToPage(statusTaskList);
+  sortCount.textContent = statusTaskList.length; 
+};
+
+function getFilterStatusArchive(arr, filter, filterValue) {
+  categoryTaskList.splice(0);
+  const filterTask = arr.filter(item => item[filter] === filterValue);
+  statusTaskList.splice(0);
+
+  filterTask.forEach(item => {
+    statusTaskList.push(item);
+  });
+  addTaskToPage(statusTaskList);
+  sortCount.textContent = statusTaskList.length;
+};
+
+
+function getFilterCategoty(arr, filter, filterValue) {
+  categoryTaskList.splice(0);
+  const filterTask = arr.filter(item => item[filter] === filterValue);
+  filterTask.forEach(item => {
+    categoryTaskList.push(item);
+  });
+  addTaskToPage(categoryTaskList);
+  sortCount.textContent = categoryTaskList.length;
+};
+
+function getFilterCategotyAll() {
+  categoryTaskList.splice(0);
+  statusTaskList.forEach(item => {
+    categoryTaskList.push(item);
+  });
+  addTaskToPage(categoryTaskList);
+  sortCount.textContent = categoryTaskList.length;
+};
+
+
+
 
 
 // 1. додавання кнопки "редагувати" та "архів" до карток
