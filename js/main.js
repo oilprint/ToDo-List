@@ -3,17 +3,13 @@ const myForm = document.querySelector('.form'),
       formFields = document.querySelectorAll('.form-field'),
       sortSection = document.querySelector('.sorting'),
       sortCount = document.querySelector('.sorting__count'),
-       
-      // inputTask = document.querySelector('#task-text'),
-      // inputDate = document.querySelector('.form-field--date'),
-      // inputTime = document.querySelector('.form-field--time'),
-      // categories = document.querySelectorAll('.categories__group'),
+      sortingBtns = document.querySelectorAll('.sort-radio__input'),
       taskList = document.querySelector('.task-list'),
       notifications = document.querySelector('.notifications'),
-      // btnAddTask = document.querySelector('.add-task__btn'),
       nowDate = Date.now(),
       statusTaskList = [],
       categoryTaskList = [],
+      timeTaskList = [],
       allTasks = JSON.parse(localStorage.getItem('allTasks')) || [];
 
 const messages = {
@@ -43,8 +39,10 @@ const msgText = {
 const yearInMs = 365 *24 * 3600 *1000;
 
 addFormValidation(myForm);
-
 addTaskToPage(allTasks);
+
+addFilters();
+addFiltersEvents(sortingBtns);
 
 
 function addFormValidation(formName) {
@@ -226,7 +224,7 @@ function addTaskToPage(arr) {
       </div>
       <div class="task__info">
           <div class="task__category" title="${category}"></div>
-          <div class="task__date">${taskTime} днів </div>
+          <div class="task__date">${taskTime}</div>
       </div>
       <button class="btn btn--icon btn--gray task__btn task__btn--archive" type="button" title="Архівувати/Вилучити"></button>
   </div>
@@ -352,14 +350,188 @@ function textOfTask(id) {
 function addFilters() {
   if (allTasks.length > 1) {
      sortSection.classList.remove('hide');
+     allTasks.forEach(item => {
+      statusTaskList.push(item);
+      categoryTaskList.push(item);
+     })
      sortCount.textContent = allTasks.length;
-     document.getElementById('categorySort[all]').setAttribute('checked', true)
-     document.getElementById('timeSort[all]').setAttribute('checked', true);
+     sortingBtns.forEach(item => {
+        if(item.getAttribute('id') === 'categorySort[all]') {
+          item.checked = true;
+        } else if (item.getAttribute('id') === 'timeSort[all]') {
+          item.checked = true;
+        };
+      });
   };
 };
 
-addFilters();
 
+function addFiltersEvents(btns) {
+  btns.forEach(item => {
+    item.addEventListener('click', (e) => {
+      let targetSort = e.target.getAttribute('id');
+      checkAndApplySort(targetSort);
+    })
+  })
+}
+
+function checkAndApplySort(sortValue) {
+  switch (sortValue) {
+    case 'statusSort[all]':
+      sortTasksByStatus(allTasks, 'all');
+      break;
+    case 'statusSort[undone]':
+      sortTasksByStatus(allTasks,'new');
+      break;     
+    case 'statusSort[done]':
+      sortTasksByStatus(allTasks, 'done');
+      break;      
+      case 'statusSort[archive]':
+        sortTasksByStatus(allTasks,'archive');    
+      break;
+    case 'categorySort[all]':
+      sortTasksByCategory(statusTaskList, 'all');    
+      break;
+    case 'categorySort[urgent]':
+      sortTasksByCategory(statusTaskList, 'urgent');
+      break;
+    case 'categorySort[study]':
+      sortTasksByCategory(statusTaskList, 'study');
+      break;
+    case 'categorySort[work]':
+      sortTasksByCategory(statusTaskList, 'work');
+      break;
+    case 'categorySort[hobby]':
+      sortTasksByCategory(statusTaskList, 'hobby');
+      break;
+    case 'timeSort[all]':
+      sortTasksByTime('all');
+      break;
+    case 'timeSort[new]':
+      sortTasksByTime('new');;
+      break;
+    case 'timeSort[expired]':
+      sortTasksByTime('expired');
+      break;
+    case 'timeSort[oneWeek]':
+      sortTasksByTime('oneWeek');
+      break;
+    case 'timeSort[oneMonth]':
+      sortTasksByTime('oneMonth');
+      break;
+    case 'timeSort[closest]':
+      console.log('timeSort[closest]');
+      break;
+    case 'timeSort[distance]':
+      console.log('timeSort[distance]');
+      break;
+  
+    default:
+      break;
+  }
+}
+
+function sortTasksByStatus(arr, sortValue) {
+   statusTaskList.splice(0);
+  if (sortValue === 'all') {
+    allTasks.forEach(item => {
+      statusTaskList.push(item);
+    });
+  } else if (sortValue === 'archive') {
+    const sortTasksList = arr.filter(item => item.inArchive === true);
+    sortTasksList.forEach(item => statusTaskList.push(item));
+  } else {
+    const sortTasksList = arr.filter(item => item.taskStatus === sortValue);
+    sortTasksList.forEach(item => {
+      if (item.inArchive !== true) {
+       statusTaskList.push(item);
+      }
+    });
+  };
+
+  sortingBtns.forEach(item => {
+    if (item.name === 'categorySort') {
+      if (item.checked === true) {
+        sortTasksByCategory(statusTaskList, item.getAttribute('value'));
+      };
+    };
+  });
+
+  sortingBtns.forEach(item => {
+    if (item.name === 'timeSort') {
+      if (item.checked === true) {
+        sortTasksByTime(item.getAttribute('value'));
+      };
+    };
+  });
+
+  addTaskToPage(timeTaskList);
+  sortCount.textContent = timeTaskList.length;
+};
+
+function sortTasksByCategory(arr, sortValue) {
+  categoryTaskList.splice(0);
+  if(sortValue !== 'all') {
+    const sortTasksList = arr.filter(item => item.category === sortValue);
+    sortTasksList.forEach(item => {
+      categoryTaskList.push(item);  
+    });
+  } else {
+    statusTaskList.forEach(item => {
+        categoryTaskList.push(item);  
+    });   
+  };
+
+  sortingBtns.forEach(item => {
+    if (item.name === 'timeSort') {
+      if (item.checked === true) {
+        sortTasksByTime(item.getAttribute('value'));
+      };
+    };
+  });
+
+  addTaskToPage(timeTaskList);
+  sortCount.textContent = timeTaskList.length;
+};
+
+function sortTasksByTime(num) {
+  timeTaskList.splice(0);
+  categoryTaskList.forEach(item => {
+    const chosenDate = Date.parse(item.dateTime);
+    const datesDiff = chosenDate - nowDate;
+    const daysDiff = Math.floor(datesDiff / (24 * 3600 * 1000));
+    switch (num) {
+      case 'all':
+        timeTaskList.push(item);
+      break;
+      case 'new':
+        if (daysDiff >= 0 && daysDiff < 1) {
+          timeTaskList.push(item);
+        };
+        break;
+      case 'expired':
+        if (daysDiff < 0) {
+          timeTaskList.push(item);
+        }
+        break;
+      case 'oneWeek':
+        if (daysDiff < 7 && daysDiff >= 0 ) {
+          timeTaskList.push(item);
+        }
+        break;
+      case 'oneMonth':
+        if (daysDiff < 30 && daysDiff >= 0 ) {
+          timeTaskList.push(item);
+        }
+        break;
+    
+      default:
+        break;
+    }
+  });
+  addTaskToPage(timeTaskList);
+  sortCount.textContent = timeTaskList.length; 
+};
 
 document.addEventListener('click', (e) => {
   const target = e.target;
@@ -433,114 +605,4 @@ document.addEventListener('click', (e) => {
   };
 
 });
-
-sortSection.addEventListener('click', (e) => {
-  const target = e.target;
-  if (target.getAttribute('id') === 'statusSort[all]'){
-     statusTaskList.splice(0);
-    allTasks.forEach(item => {
-      statusTaskList.push(item);
-    });
-    addTaskToPage(statusTaskList);
-    sortCount.textContent = statusTaskList.length;
-  };
-
-
-  if (target.getAttribute('id') === 'statusSort[undone]'){
-
-    getFilterStatusTaskList(allTasks, 'taskStatus', 'new');
-    console.log(statusTaskList);
-
-  };
-
-  if (target.getAttribute('id') === 'statusSort[done]'){
-    getFilterStatusTaskList(allTasks, 'taskStatus', 'done');
-    console.log(statusTaskList);
-  };
-
-  if (target.getAttribute('id') === 'statusSort[archive]'){
-    getFilterStatusArchive(allTasks, 'inArchive', true);
-  };
-
-  if (target.getAttribute('id') === 'categorySort[all]'){
-    getFilterCategotyAll();
-  };
-
-  if (target.getAttribute('id') === 'categorySort[urgent]'){
-    getFilterCategoty(statusTaskList, 'category', 'urgent');
-  };
-
-  if (target.getAttribute('id') === 'categorySort[study]'){
-    getFilterCategoty(statusTaskList, 'category', 'study');
-  };
-
-  if (target.getAttribute('id') === 'categorySort[work]'){
-    getFilterCategoty(statusTaskList, 'category', 'work');
-  };
-
-  if (target.getAttribute('id') === 'categorySort[hobby]'){
-    getFilterCategoty(statusTaskList, 'category', 'hobby');
-  };
-
-});
-
-const categoryFilters = sortSection.querySelectorAll('.category-sorting');
-
-function getFilterStatusTaskList(arr, filter, filterValue) {
-  categoryTaskList.splice(0);
-    const filterTask = arr.filter(item => item[filter] === filterValue);
-    statusTaskList.splice(0);
-    filterTask.forEach(item => {
-      if (item.inArchive === false) {
-        statusTaskList.push(item);
-      }
-    });
-  addTaskToPage(statusTaskList);
-  sortCount.textContent = statusTaskList.length; 
-};
-
-function getFilterStatusArchive(arr, filter, filterValue) {
-  categoryTaskList.splice(0);
-  const filterTask = arr.filter(item => item[filter] === filterValue);
-  statusTaskList.splice(0);
-
-  filterTask.forEach(item => {
-    statusTaskList.push(item);
-  });
-  addTaskToPage(statusTaskList);
-  sortCount.textContent = statusTaskList.length;
-};
-
-
-function getFilterCategoty(arr, filter, filterValue) {
-  categoryTaskList.splice(0);
-  const filterTask = arr.filter(item => item[filter] === filterValue);
-  filterTask.forEach(item => {
-    categoryTaskList.push(item);
-  });
-  addTaskToPage(categoryTaskList);
-  sortCount.textContent = categoryTaskList.length;
-};
-
-function getFilterCategotyAll() {
-  categoryTaskList.splice(0);
-  statusTaskList.forEach(item => {
-    categoryTaskList.push(item);
-  });
-  addTaskToPage(categoryTaskList);
-  sortCount.textContent = categoryTaskList.length;
-};
-
-
-
-
-
-// 1. додавання кнопки "редагувати" та "архів" до карток
-// 2. при натисканні кнопки "редагування" з'являєтся поле для редагування та кноки
-// 3. додати дію для кнопок "ок" та "відміна"
-// 4. додави фільтри та лічильник завдань
-// 4. валидація фільтрів 
-
-
-
 
