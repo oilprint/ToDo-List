@@ -353,6 +353,7 @@ function addFilters() {
      allTasks.forEach(item => {
       statusTaskList.push(item);
       categoryTaskList.push(item);
+      timeTaskList.push(item);
      })
      sortCount.textContent = allTasks.length;
      sortingBtns.forEach(item => {
@@ -365,7 +366,6 @@ function addFilters() {
   };
 };
 
-
 function addFiltersEvents(btns) {
   btns.forEach(item => {
     item.addEventListener('click', (e) => {
@@ -373,7 +373,7 @@ function addFiltersEvents(btns) {
       checkAndApplySort(targetSort);
     })
   })
-}
+};
 
 function checkAndApplySort(sortValue) {
   switch (sortValue) {
@@ -420,15 +420,28 @@ function checkAndApplySort(sortValue) {
       sortTasksByTime('oneMonth');
       break;
     case 'timeSort[closest]':
-      console.log('timeSort[closest]');
+      sortTaskFromClosest('closest');
       break;
     case 'timeSort[distance]':
-      console.log('timeSort[distance]');
+      sortTaskFromClosest('distance');
       break;
   
     default:
       break;
   }
+};
+
+
+function sortTaskFromClosest(value) {
+  let closestTaskList = [];
+  if (value === 'closest') {
+    closestTaskList = [...timeTaskList].sort((a, b) => Date.parse(b.dateTime) - Date.parse(a.dateTime));
+  } else if (value === 'distance') {
+    closestTaskList = [...timeTaskList].sort((a, b) => Date.parse(a.dateTime) - Date.parse(b.dateTime));
+  }
+  
+  addTaskToPage(closestTaskList);
+  sortCount.textContent = closestTaskList.length;
 }
 
 function sortTasksByStatus(arr, sortValue) {
